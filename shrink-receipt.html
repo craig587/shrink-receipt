@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Shrink Receipt">
+<meta name="theme-color" content="#0a1628">
+<title>Shrink Receipt — Tango Flight</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:    #0a1628;
+    --orange:  #e85d26;
+    --orange2: #ff7a3d;
+    --white:   #ffffff;
+    --gray:    #8a9ab5;
+    --light:   #f0f4fa;
+    --green:   #22c55e;
+    --radius:  16px;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--navy);
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--white);
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100dvh;
+    padding: env(safe-area-inset-top, 20px) 20px env(safe-area-inset-bottom, 20px);
+  }
+
+  /* ── Header ── */
+  .header {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 0 24px;
+  }
+
+  .logo-mark {
+    width: 44px;
+    height: 44px;
+    background: var(--orange);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .logo-mark svg { width: 26px; height: 26px; }
+
+  .brand { display: flex; flex-direction: column; }
+  .brand-top { font-size: 11px; font-weight: 600; letter-spacing: .12em; color: var(--orange); text-transform: uppercase; }
+  .brand-name { font-size: 17px; font-weight: 800; line-height: 1.1; color: var(--white); }
+
+  /* ── Main card ── */
+  .card {
+    width: 100%;
+    max-width: 420px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: var(--radius);
+    overflow: hidden;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Drop / preview zone ── */
+  .zone {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 24px;
+    min-height: 260px;
+    position: relative;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .zone:active { background: rgba(232,93,38,.08); }
+
+  .zone-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(232,93,38,0.15);
+    border: 2px dashed rgba(232,93,38,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    transition: all .2s;
+  }
+  .zone-icon svg { width: 36px; height: 36px; color: var(--orange); }
+
+  .zone-label {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--white);
+    text-align: center;
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+  .zone-sub {
+    font-size: 14px;
+    color: var(--gray);
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  /* Preview state */
+  .preview-img {
+    width: 100%;
+    max-height: 300px;
+    object-fit: contain;
+    border-radius: 10px;
+    display: none;
+  }
+
+  /* ── Stats bar ── */
+  .stats {
+    display: none;
+    background: rgba(0,0,0,0.25);
+    padding: 14px 20px;
+    gap: 0;
+  }
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+  }
+  .stat-label { font-size: 13px; color: var(--gray); }
+  .stat-value { font-size: 13px; font-weight: 600; }
+  .stat-value.original { color: #f87171; }
+  .stat-value.compressed { color: var(--green); }
+  .stat-value.savings { color: var(--orange2); }
+
+  .divider { height: 1px; background: rgba(255,255,255,0.08); margin: 4px 0; }
+
+  /* ── Quality slider ── */
+  .quality-section {
+    padding: 16px 20px 4px;
+    display: none;
+  }
+  .quality-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .quality-label { font-size: 13px; color: var(--gray); }
+  .quality-value { font-size: 13px; font-weight: 700; color: var(--orange2); }
+
+  input[type=range] {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 4px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.15);
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--orange);
+    cursor: pointer;
+    border: 3px solid var(--white);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+
+  /* ── Action buttons ── */
+  .actions {
+    padding: 16px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 17px 20px;
+    border-radius: 12px;
+    border: none;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: opacity .15s, transform .1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:active { transform: scale(0.97); opacity: .9; }
+  .btn:disabled { opacity: .35; pointer-events: none; }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--orange), var(--orange2));
+    color: var(--white);
+    box-shadow: 0 4px 20px rgba(232,93,38,0.4);
+  }
+
+  .btn-secondary {
+    background: rgba(255,255,255,0.08);
+    color: var(--white);
+    border: 1px solid rgba(255,255,255,0.15);
+    display: none;
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--gray);
+    font-size: 14px;
+    padding: 10px;
+    display: none;
+  }
+
+  /* ── Hidden inputs ── */
+  #fileInput { display: none; }
+
+  /* ── Install hint ── */
+  .install-hint {
+    width: 100%;
+    max-width: 420px;
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .hint-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .hint-text { font-size: 12px; color: var(--gray); line-height: 1.5; }
+  .hint-text strong { color: var(--white); }
+
+  /* ── Success flash ── */
+  .toast {
+    position: fixed;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 30px);
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--green);
+    color: var(--white);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 24px;
+    border-radius: 100px;
+    white-space: nowrap;
+    transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+    pointer-events: none;
+    z-index: 999;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo-mark">
+    <!-- Airplane / T silhouette -->
+    <svg viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M13 2L3 16h5v8l5-3 5 3v-8h5L13 2z" fill="white" opacity=".95"/>
+    </svg>
+  </div>
+  <div class="brand">
+    <span class="brand-top">Tango Flight</span>
+    <span class="brand-name">Shrink Receipt</span>
+  </div>
+</div>
+
+<div class="card" id="card">
+
+  <!-- Drop / tap zone -->
+  <div class="zone" id="zone" onclick="document.getElementById('fileInput').click()">
+    <div class="zone-icon" id="zoneIcon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+        <circle cx="12" cy="13" r="4"/>
+      </svg>
+    </div>
+    <div class="zone-label" id="zoneLabel">Tap to snap or<br>choose a receipt</div>
+    <div class="zone-sub" id="zoneSub">Photo compresses instantly on your phone.<br>Nothing is uploaded anywhere.</div>
+    <img class="preview-img" id="preview" alt="Receipt preview">
+  </div>
+
+  <!-- Quality slider (shown after image load) -->
+  <div class="quality-section" id="qualitySection">
+    <div class="quality-header">
+      <span class="quality-label">Compression quality</span>
+      <span class="quality-value" id="qualityDisplay">Low — smallest file</span>
+    </div>
+    <input type="range" id="qualitySlider" min="1" max="3" value="1" step="1">
+  </div>
+
+  <!-- Stats -->
+  <div class="stats" id="stats">
+    <div class="stat-row">
+      <span class="stat-label">Original size</span>
+      <span class="stat-value original" id="origSize">—</span>
+    </div>
+    <div class="divider"></div>
+    <div class="stat-row">
+      <span class="stat-label">Compressed size</span>
+      <span class="stat-value compressed" id="compSize">—</span>
+    </div>
+    <div class="divider"></div>
+    <div class="stat-row">
+      <span class="stat-label">Space saved</span>
+      <span class="stat-value savings" id="savings">—</span>
+    </div>
+  </div>
+
+  <!-- Buttons -->
+  <div class="actions">
+    <button class="btn btn-primary" id="btnCapture" onclick="document.getElementById('fileInput').click()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+        <circle cx="12" cy="13" r="4"/>
+      </svg>
+      Take or Choose Photo
+    </button>
+
+    <button class="btn btn-secondary" id="btnShare" onclick="shareFile()" disabled>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+        <polyline points="16 6 12 2 8 6"/>
+        <line x1="12" y1="2" x2="12" y2="15"/>
+      </svg>
+      Save / Share Shrunk Photo
+    </button>
+
+    <button class="btn btn-ghost" id="btnReset" onclick="resetAll()">
+      ↩ Start over
+    </button>
+  </div>
+
+</div>
+
+<!-- Install hint -->
+<div class="install-hint" id="installHint">
+  <span class="hint-icon">📲</span>
+  <span class="hint-text"><strong>Add to Home Screen:</strong> Tap the Share button in Safari → "Add to Home Screen" → Add. Opens like a real app next time.</span>
+</div>
+
+<div class="toast" id="toast">✓ Photo ready to attach!</div>
+
+<input type="file" id="fileInput" accept="image/*" capture="environment">
+
+<script>
+  // ── State ──
+  let compressedBlob = null;
+  let originalName   = 'receipt';
+  let qualityMap     = { 1: 0.45, 2: 0.65, 3: 0.82 };
+  let qualityLabels  = { 1: 'Low — smallest file', 2: 'Medium — balanced', 3: 'High — best detail' };
+  let currentFile    = null;
+
+  const fileInput     = document.getElementById('fileInput');
+  const preview       = document.getElementById('preview');
+  const zone          = document.getElementById('zone');
+  const zoneIcon      = document.getElementById('zoneIcon');
+  const zoneLabel     = document.getElementById('zoneLabel');
+  const zoneSub       = document.getElementById('zoneSub');
+  const statsEl       = document.getElementById('stats');
+  const qualitySec    = document.getElementById('qualitySection');
+  const qualitySlider = document.getElementById('qualitySlider');
+  const qualityDisp   = document.getElementById('qualityDisplay');
+  const origSizeEl    = document.getElementById('origSize');
+  const compSizeEl    = document.getElementById('compSize');
+  const savingsEl     = document.getElementById('savings');
+  const btnShare      = document.getElementById('btnShare');
+  const btnCapture    = document.getElementById('btnCapture');
+  const btnReset      = document.getElementById('btnReset');
+
+  // ── File chosen ──
+  fileInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    currentFile  = file;
+    originalName = file.name.replace(/\.[^.]+$/, '') || 'receipt';
+    compress(file, parseInt(qualitySlider.value));
+  });
+
+  // ── Quality slider ──
+  qualitySlider.addEventListener('input', () => {
+    qualityDisp.textContent = qualityLabels[qualitySlider.value];
+    if (currentFile) compress(currentFile, parseInt(qualitySlider.value));
+  });
+
+  // ── Compress ──
+  function compress(file, level) {
+    const q = qualityMap[level];
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        // Cap max dimension at 1800px (plenty for a receipt)
+        let w = img.width, h = img.height;
+        const MAX = 1800;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else        { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob(blob => {
+          compressedBlob = blob;
+          // Update preview
+          preview.src = URL.createObjectURL(blob);
+          preview.style.display = 'block';
+          zoneIcon.style.display = 'none';
+          zoneLabel.style.display = 'none';
+          zoneSub.style.display   = 'none';
+          zone.style.cursor = 'default';
+          // Unbind click from zone so preview doesn't retrigger
+          zone.onclick = null;
+
+          // Stats
+          statsEl.style.display    = 'flex';
+          statsEl.style.flexDirection = 'column';
+          qualitySec.style.display = 'block';
+          origSizeEl.textContent   = fmtSize(file.size);
+          compSizeEl.textContent   = fmtSize(blob.size);
+          const pct = Math.round((1 - blob.size / file.size) * 100);
+          savingsEl.textContent    = pct > 0 ? `${pct}% smaller` : 'Already small!';
+
+          // Buttons
+          btnShare.style.display   = 'flex';
+          btnShare.disabled        = false;
+          btnReset.style.display   = 'flex';
+          btnCapture.textContent   = '📷  Choose a different photo';
+        }, 'image/jpeg', q);
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ── Share / Save ──
+  async function shareFile() {
+    if (!compressedBlob) return;
+    const fname = `${originalName}_small.jpg`;
+    const file  = new File([compressedBlob], fname, { type: 'image/jpeg' });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: 'Receipt',
+          text: 'Compressed receipt from Tango Flight Shrink Receipt'
+        });
+        showToast('✓ Photo ready to attach!');
+      } catch(e) {
+        if (e.name !== 'AbortError') fallbackDownload(fname);
+      }
+    } else {
+      fallbackDownload(fname);
+    }
+  }
+
+  function fallbackDownload(fname) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(compressedBlob);
+    a.download = fname;
+    a.click();
+    showToast('✓ Saved to Downloads!');
+  }
+
+  // ── Reset ──
+  function resetAll() {
+    compressedBlob = null;
+    currentFile    = null;
+    fileInput.value = '';
+    preview.style.display    = 'none';
+    preview.src              = '';
+    zoneIcon.style.display   = 'flex';
+    zoneLabel.style.display  = 'block';
+    zoneSub.style.display    = 'block';
+    zone.style.cursor        = 'pointer';
+    zone.onclick = () => fileInput.click();
+    statsEl.style.display    = 'none';
+    qualitySec.style.display = 'none';
+    btnShare.style.display   = 'none';
+    btnReset.style.display   = 'none';
+    btnCapture.innerHTML = `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+        <circle cx="12" cy="13" r="4"/>
+      </svg>
+      Take or Choose Photo`;
+    qualitySlider.value      = 1;
+    qualityDisp.textContent  = qualityLabels[1];
+  }
+
+  // ── Toast ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  // ── Hide install hint if already standalone ──
+  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+    document.getElementById('installHint').style.display = 'none';
+  }
+</script>
+</body>
+</html>
